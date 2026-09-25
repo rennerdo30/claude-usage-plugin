@@ -24,13 +24,14 @@ const SESSIONS_FILE = path.join(DATA_DIR, 'sessions.json');
 const STOPS_FILE = path.join(DATA_DIR, 'stops.json');
 const LOCK_FILE = path.join(DATA_DIR, 'refresh.lock');
 
-const THRESHOLDS = [50, 75, 90];
+const THRESHOLDS = [90, 95];
 // At or above this, every agent is told to stop and document its work.
 const STOP_AT = Number(process.env.USAGE_CHECK_STOP_AT) || 99;
 
 const CACHE_TTL_MS = 5 * 60 * 1000;
 // Near the limit, usage moves fast, so readings are refreshed more often.
 const CACHE_TTL_HIGH_MS = 60 * 1000;
+const HIGH_REFRESH_AT = 90;
 const LOCK_STALE_MS = 2 * 60 * 1000;
 const STALE_NOTE_MS = 15 * 60 * 1000;
 // An agent that keeps working past the stop notice is reminded this often.
@@ -106,7 +107,7 @@ function refresh() {
 }
 
 function startRefreshIfStale(cache, top) {
-  const ttl = top >= THRESHOLDS[THRESHOLDS.length - 1] ? CACHE_TTL_HIGH_MS : CACHE_TTL_MS;
+  const ttl = top >= HIGH_REFRESH_AT ? CACHE_TTL_HIGH_MS : CACHE_TTL_MS;
   if (cache && Date.now() - cache.fetchedAt < ttl) return;
   try {
     const lock = fs.statSync(LOCK_FILE);
@@ -171,12 +172,10 @@ const STOP_MAIN =
 function advice(level) {
   switch (level) {
     case 0:
-      return '';
+      return ' No need to change plans.';
     case 1:
-      return ' Prefer lean approaches.';
+      return ' Prefer lean approaches, and check with the user before starting large tasks.';
     case 2:
-      return ' Check with the user before starting large tasks.';
-    case 3:
       return ' Do not start new large work; finish the current unit and leave it resumable.';
     default:
       return ` ${STOP_MAIN}`;

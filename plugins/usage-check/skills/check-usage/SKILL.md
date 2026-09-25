@@ -39,11 +39,10 @@ If the output says the session is using an API key instead of a subscription, th
 
 Use the highest percentage among the lines that apply:
 
-- **Below 50%:** carry on. Don't mention it unless asked.
-- **50–75%:** carry on, but prefer lean approaches. For example, search directly instead of starting subagents.
-- **75–90%:** before starting a large task, tell the user the numbers and the reset time, and propose a smaller scope or a checkpoint.
+- **Below 90%:** carry on as normal, large tasks and subagents included. Don't mention it unless asked.
+- **90–95%:** carry on, but prefer lean approaches (for example, search directly instead of starting subagents). Before starting a large task, tell the user the numbers and the reset time, and propose a smaller scope or a checkpoint.
+- **95–99%:** don't start new large work. Finish the current unit, leave the work in a resumable state (commit or write notes on what's done and what's next), and tell the user when the limit resets.
 - **99% and above (stop level):** stop. This plugin's hooks also say so to every agent. As the main agent: start no new work or subagents, tell running subagents to stop and report their progress (SendMessage for background agents), save the work state (a commit or a handoff note on what's done, what's left, and where), and tell the user when the limit resets. As a subagent: finish only the step in progress, then end with that handoff as your final message.
-- **Above 90%:** don't start new large work. Finish the current unit, leave the work in a resumable state (commit or write notes on what's done and what's next), and tell the user when the limit resets.
 
 When reporting, keep it to one or two lines. For example: "Usage: 5-hour window 94% (resets 9:09pm), weekly 96% (resets Sep 29)."
 

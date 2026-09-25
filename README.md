@@ -18,9 +18,9 @@ Marketplace URL: `https://github.com/rennerdo30/claude-usage-plugin`
 **Automatic notices (hook).** On each prompt, a `UserPromptSubmit` hook tells Claude where usage stands, but only when it matters:
 
 - at the start of a session
-- when the 5-hour or weekly usage crosses 50%, 75% or 90%
+- when the 5-hour or weekly usage crosses 90% or 95%
 - when a window resets
-- above 90%, whenever a new reading comes in
+- above 95%, whenever a new reading comes in
 
 It looks like this in Claude's context:
 
