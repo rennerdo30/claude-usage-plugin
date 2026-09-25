@@ -79,6 +79,73 @@ function parseUsage(text) {
   return windows;
 }
 
+const MONTHS = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
+const DAY_MS = 24 * 60 * 60 * 1000;
+// A dated reset further than this before the reading belongs to the next year.
+const YEAR_ROLLOVER_MS = 180 * DAY_MS;
+
+// Wall-clock parts of utcMs in the given IANA zone (or local time without one).
+function wallClock(utcMs, zone) {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: zone || undefined,
+    hourCycle: 'h23',
+    year: 'numeric',
+    month: 'numeric',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: 'numeric',
+    second: 'numeric',
+  }).formatToParts(new Date(utcMs));
+  const get = (type) => Number(parts.find((p) => p.type === type).value);
+  return { year: get('year'), month: get('month') - 1, day: get('day'), hour: get('hour'), minute: get('minute'), second: get('second') };
+}
+
+// Converts a wall-clock time in a zone to a UTC timestamp.
+function zonedToUtc(year, month, day, hour, minute, zone) {
+  const wall = Date.UTC(year, month, day, hour, minute);
+  const offsetAt = (utcMs) => {
+    const w = wallClock(utcMs, zone);
+    return Date.UTC(w.year, w.month, w.day, w.hour, w.minute, w.second) - utcMs;
+  };
+  const guess = wall - offsetAt(wall);
+  return wall - offsetAt(guess);
+}
+
+// "Sep 26, 2:20am (Asia/Tokyo)", "Sep 27, 4pm (Asia/Tokyo)" or "2:19pm (Asia/Tokyo)".
+// Returns the reset as a timestamp, taking the first match after the reading, or null.
+function resetTime(text, readingMs) {
+  const m = /^(?:([a-z]{3})[a-z]* (\d{1,2}),?\s+)?(\d{1,2})(?::(\d{2}))?\s*(am|pm)?\s*(?:\(([^)]+)\))?$/i.exec(
+    (text || '').trim()
+  );
+  if (!m) return null;
+  try {
+    const zone = m[6] || null;
+    let hour = Number(m[3]);
+    const minute = Number(m[4] || 0);
+    if (m[5]) hour = (hour % 12) + (m[5].toLowerCase() === 'pm' ? 12 : 0);
+    const ref = wallClock(readingMs, zone);
+    if (m[1]) {
+      const month = MONTHS.indexOf(m[1].toLowerCase());
+      if (month < 0) return null;
+      let at = zonedToUtc(ref.year, month, Number(m[2]), hour, minute, zone);
+      if (at < readingMs - YEAR_ROLLOVER_MS) at = zonedToUtc(ref.year + 1, month, Number(m[2]), hour, minute, zone);
+      return at;
+    }
+    let at = zonedToUtc(ref.year, ref.month, ref.day, hour, minute, zone);
+    if (at < readingMs) at += DAY_MS;
+    return at;
+  } catch {
+    // Unknown time zone or similar: treat the reset time as unknown.
+    return null;
+  }
+}
+
+// True once the window's reset time has passed, so its percentage is out of date.
+function hasReset(w, cache) {
+  const at = resetTime(w.resets, cache.fetchedAt);
+  return at !== null && Date.now() >= at;
+}
+
 function refresh() {
   fs.mkdirSync(DATA_DIR, { recursive: true });
   let output = '';
@@ -108,7 +175,8 @@ function refresh() {
 
 function startRefreshIfStale(cache, top) {
   const ttl = top >= HIGH_REFRESH_AT ? CACHE_TTL_HIGH_MS : CACHE_TTL_MS;
-  if (cache && Date.now() - cache.fetchedAt < ttl) return;
+  const anyReset = cache && cache.available && cache.windows.some((w) => hasReset(w, cache));
+  if (cache && !anyReset && Date.now() - cache.fetchedAt < ttl) return;
   try {
     const lock = fs.statSync(LOCK_FILE);
     if (Date.now() - lock.mtimeMs < LOCK_STALE_MS) return;
@@ -134,7 +202,8 @@ function mainWindows(cache) {
 
 function topPct(cache) {
   const main = mainWindows(cache);
-  return main.length ? Math.max(...main.map((w) => w.pct)) : -1;
+  // A window whose reset time has passed starts again from zero.
+  return main.length ? Math.max(...main.map((w) => (hasReset(w, cache) ? 0 : w.pct))) : -1;
 }
 
 function levelOf(pct) {
@@ -142,17 +211,20 @@ function levelOf(pct) {
   return THRESHOLDS.filter((t) => pct >= t).length;
 }
 
-function describe(w) {
+function describe(w, cache) {
   const name = w.kind === 'session' ? '5-hour window' : `weekly (${w.scope})`;
+  if (hasReset(w, cache)) {
+    return `${name} has reset (was ${w.pct}%, reset time ${w.resets} has passed; a fresh reading is on its way)`;
+  }
   return `${name} ${w.pct}%${w.resets ? ` (resets ${w.resets})` : ''}`;
 }
 
 function summary(cache) {
   const main = mainWindows(cache);
-  const others = cache.windows.filter((w) => !main.includes(w) && w.pct >= THRESHOLDS[0]);
+  const others = cache.windows.filter((w) => !main.includes(w) && w.pct >= THRESHOLDS[0] && !hasReset(w, cache));
   const age = Date.now() - cache.fetchedAt;
   const ageNote = age > STALE_NOTE_MS ? ` [reading is ${Math.round(age / 60000)} min old]` : '';
-  return `Usage: ${[...main, ...others].map(describe).join(', ')}.${ageNote}`;
+  return `Usage: ${[...main, ...others].map((w) => describe(w, cache)).join(', ')}.${ageNote}`;
 }
 
 const STOP_SUBAGENT =

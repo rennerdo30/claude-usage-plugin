@@ -35,7 +35,7 @@ Usage: 5-hour window 94% (resets Sep 25, 9:09pm), weekly (all models) 96% (reset
 
 Each agent gets the notice once, with a reminder every 2 minutes if it keeps working. To stop at a different percentage, set the environment variable `USAGE_CHECK_STOP_AT`, e.g. `USAGE_CHECK_STOP_AT=97`. Readings are at most 5 minutes old, and at most 1 minute old once usage is above 90%. If your agents burn through quota fast, a slightly lower value gives them room to finish the handoff.
 
-The hooks only read a cache file, so they never make Claude wait. When the reading is older than 5 minutes (1 minute above 90%), it refreshes it in the background by running `claude -p "/usage"`. The cache lives in the plugin's data directory.
+The hooks only read a cache file, so they never make Claude wait. When the reading is older than 5 minutes (1 minute above 90%), it refreshes it in the background by running `claude -p "/usage"`. It also refreshes right away once a window's reset time has passed. Until the new reading arrives, that window counts as 0% and Claude is told that it has reset, so it doesn't wait for a reset that already happened. The cache lives in the plugin's data directory.
 
 **On-demand check (skill).** The `check-usage` skill runs the same command when Claude wants fresh numbers. Claude uses it:
 

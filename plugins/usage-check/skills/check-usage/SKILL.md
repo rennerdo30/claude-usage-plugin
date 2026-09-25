@@ -37,6 +37,8 @@ If the output says the session is using an API key instead of a subscription, th
 
 ## Act on it
 
+Before acting on a reading, compare each reset time with the current time (run `date` if you don't know it). If the reset time has already passed, that window has reset and its percentage is out of date: count it as 0% and get fresh numbers before deciding anything. Never offer to wait until a reset time that is already in the past.
+
 Use the highest percentage among the lines that apply:
 
 - **Below 90%:** carry on as normal, large tasks and subagents included. Don't mention it unless asked.
