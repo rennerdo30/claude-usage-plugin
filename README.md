@@ -28,7 +28,14 @@ It looks like this in Claude's context:
 Usage: 5-hour window 94% (resets Sep 25, 9:09pm), weekly (all models) 96% (resets Sep 29, 1:59pm). Do not start new large work; finish the current unit and leave it resumable.
 ```
 
-The hook only reads a cache file, so your prompt never waits on it. When the reading is older than 5 minutes, it refreshes it in the background by running `claude -p "/usage"`. The cache lives in the plugin's data directory.
+**Stop before the limit (hooks, subagents included).** At 99% of the 5-hour or weekly limit, every agent is told to stop and hand off its work:
+
+- **Subagents** get the notice after their next tool call, and new subagents get it as soon as they start. They finish only what's in progress, then end with a handoff: what they did, what's left, which files they touched, and anything half-done.
+- **The main agent** is told to start no new work, tell running subagents to stop, save the work state (a commit or a handoff note), and tell you when the limit resets.
+
+Each agent gets the notice once, with a reminder every 2 minutes if it keeps working. To stop at a different percentage, set the environment variable `USAGE_CHECK_STOP_AT`, e.g. `USAGE_CHECK_STOP_AT=97`. Readings are at most 5 minutes old, and at most 1 minute old once usage is above 90%. If your agents burn through quota fast, a slightly lower value gives them room to finish the handoff.
+
+The hooks only read a cache file, so they never make Claude wait. When the reading is older than 5 minutes (1 minute above 90%), it refreshes it in the background by running `claude -p "/usage"`. The cache lives in the plugin's data directory.
 
 **On-demand check (skill).** The `check-usage` skill runs the same command when Claude wants fresh numbers. Claude uses it:
 
