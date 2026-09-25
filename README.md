@@ -15,7 +15,22 @@ Marketplace URL: `https://github.com/rennerdo30/claude-usage-plugin`
 
 ## What it does
 
-The plugin adds a `check-usage` skill. Claude uses it:
+**Automatic notices (hook).** On each prompt, a `UserPromptSubmit` hook tells Claude where usage stands, but only when it matters:
+
+- at the start of a session
+- when the 5-hour or weekly usage crosses 50%, 75% or 90%
+- when a window resets
+- above 90%, whenever a new reading comes in
+
+It looks like this in Claude's context:
+
+```
+Usage: 5-hour window 94% (resets Sep 25, 9:09pm), weekly (all models) 96% (resets Sep 29, 1:59pm). Do not start new large work; finish the current unit and leave it resumable.
+```
+
+The hook only reads a cache file, so your prompt never waits on it. When the reading is older than 5 minutes, it refreshes it in the background by running `claude -p "/usage"`. The cache lives in the plugin's data directory.
+
+**On-demand check (skill).** The `check-usage` skill runs the same command when Claude wants fresh numbers. Claude uses it:
 
 - before large or long-running work, such as big refactors, many subagents or long autonomous loops
 - when you ask about usage, limits or reset times
@@ -28,6 +43,7 @@ Depending on the numbers, Claude carries on as normal, suggests a smaller scope,
 
 - Claude Code, logged in with a Pro, Max, Team or Enterprise subscription. With an API key there are no plan limits to check.
 - The `claude` command on your `PATH`.
+- Node.js on your `PATH` for the hook. It has no npm dependencies.
 
 ## Windows note
 

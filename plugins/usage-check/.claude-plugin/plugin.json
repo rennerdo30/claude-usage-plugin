@@ -1,6 +1,6 @@
 {
   "name": "usage-check",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Lets Claude check how much of your 5-hour and weekly usage is left, and adjust its work to fit.",
   "author": {
     "name": "rennerdo30"

@@ -46,4 +46,4 @@ Use the highest percentage among the lines that apply:
 
 When reporting, keep it to one or two lines. For example: "Usage: 5-hour window 94% (resets 9:09pm), weekly 96% (resets Sep 29)."
 
-Don't check more often than needed. Once at the start of a big task, and again after long stretches of work, is enough.
+Don't check more often than needed. This plugin's hook already adds a "Usage: ..." line to the context when a threshold is crossed or a window resets. If a recent line like that is in the context, trust it. Run the check yourself only when you need fresh numbers, such as right before a big task, or when the user asks.
