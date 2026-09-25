@@ -1,0 +1,17 @@
+{
+  "name": "claude-usage",
+  "owner": {
+    "name": "rennerdo30"
+  },
+  "metadata": {
+    "description": "Plugins that let Claude check its own subscription usage."
+  },
+  "plugins": [
+    {
+      "name": "usage-check",
+      "source": "./plugins/usage-check",
+      "description": "Lets Claude check how much of your 5-hour and weekly usage is left, and adjust its work to fit.",
+      "version": "0.1.0"
+    }
+  ]
+}
